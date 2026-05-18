@@ -1,0 +1,35 @@
+workflows:
+  ios-native-quick-start:
+    name: iOS Native
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: UniSport ProSco
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.ragnarlepp.unisportprosco
+      vars:
+        BUNDLE_ID: "com.ragnarlepp.unisportprosco"
+        XCODE_WORKSPACE: "UniSport.xcodeproj"
+        XCODE_SCHEME: "UniSport"
+        APP_STORE_APPLE_ID: 6766505567
+      xcode: latest 
+      cocoapods: default
+    scripts:
+      - name: Set up provisioning profiles settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Build ipa for distribution
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
