@@ -1,49 +1,35 @@
 workflows:
-  ios-native-simulator-preview:
-    name: iOS Native Simulator Preview
-    max_build_duration: 120
+  ios-native-quick-start:
+    name: iOS Native
+    max_build_duration: 60
     instance_type: mac_mini_m2
-
+    integrations:
+      app_store_connect: UniSport ProSco
     environment:
-      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.ragnarlepp.unisportprosco
       vars:
-        XCODE_PROJECT: "UniSport.xcodeproj"
+        BUNDLE_ID: "com.ragnarlepp.unisportprosco"
+        XCODE_WORKSPACE: "UniSport.xcodeproj"
         XCODE_SCHEME: "UniSport"
-
+        APP_STORE_APPLE_ID: 6766505567
+      xcode: latest 
+      cocoapods: default
     scripts:
-      - name: Show Xcode project info
+      - name: Set up provisioning profiles settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Build ipa for distribution
         script: |
-          set -e
-          xcodebuild -list -project "$CM_BUILD_DIR/$XCODE_PROJECT"
-
-      - name: Verify versions in project
-        script: |
-          set -x
-          grep -n "MARKETING_VERSION" "$CM_BUILD_DIR/$XCODE_PROJECT/project.pbxproj" || true
-          grep -n "CURRENT_PROJECT_VERSION" "$CM_BUILD_DIR/$XCODE_PROJECT/project.pbxproj" || true
-
-      - name: Build .app for iOS Simulator
-        script: |
-          set -e
-
-          xcodebuild build \
-            -project "$CM_BUILD_DIR/$XCODE_PROJECT" \
-            -scheme "$XCODE_SCHEME" \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO
-
-      - name: Collect simulator .app
-        script: |
-          set -e
-          mkdir -p simulator_artifacts
-          find "$HOME/Library/Developer/Xcode/DerivedData" -name "*.app" -type d -exec cp -R {} simulator_artifacts/ \;
-          echo "=== Collected apps ==="
-          find simulator_artifacts -maxdepth 2 -type d -name "*.app" -print
-
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
     artifacts:
-      - simulator_artifacts/*.app
+      - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
